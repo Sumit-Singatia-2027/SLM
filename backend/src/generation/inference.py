@@ -1,7 +1,7 @@
 import os
 """Main inference pipeline with tool support"""
 from typing import Dict, List, Optional
-from src.transformer.model import MathTransformerModel
+from src.transformer.model import MathTransformerModel, DEFAULT_LORA_ADAPTER_PATH
 from src.generation.generator import MathGenerator
 from src.generation.prompts import PromptTemplate
 from src.input_processing import UniversalMathInputProcessor
@@ -21,7 +21,11 @@ class MathSolverInference:
     def __init__(
         self,
         base_model_id: str = "Qwen/Qwen2.5-Math-1.5B-Instruct",
-        lora_adapter_path: str = ".\models\lora_adapter",
+        # BUG FIX: was the Windows-only literal ".\models\lora_adapter", which
+        # silently failed to resolve on Linux/Colab (see model.py for details).
+        # Now reuses the single source of truth defined in model.py so the two
+        # defaults can't drift out of sync again.
+        lora_adapter_path: str = DEFAULT_LORA_ADAPTER_PATH,
         enable_tools: bool = True,
         enable_wolfram: bool = False,
         wolfram_api_key: str = None

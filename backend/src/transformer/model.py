@@ -3,6 +3,24 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel, PeftConfig
 import os
+from pathlib import Path
+
+# BUG FIX: the old default here was the Windows-only literal ".\models\lora_adapter".
+# Two problems with that:
+#   1. It's an *unescaped* string literal -- "\m" and "\l" aren't valid Python
+#      escapes, so Python keeps the backslashes as literal characters (and
+#      newer Python versions even emit a SyntaxWarning about it).
+#   2. Even ignoring that, backslash is not a path separator on Linux/macOS
+#      (including Colab), so os.path.exists() on that literal string returns
+#      False there -- the adapter silently fails to load and the code quietly
+#      falls back to the base model with no error, no crash, just worse math
+#      performance nobody notices.
+# Fix: build the path with pathlib (OS-independent separators) and anchor it
+# to this file's location rather than the current working directory, so it
+# resolves correctly no matter where the caller's script/notebook is run from.
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]  # backend/src/transformer -> backend/
+DEFAULT_LORA_ADAPTER_PATH = str(_BACKEND_ROOT / "models" / "lora_adapter")
+
 
 class MathTransformerModel:
     """Wrapper for the Qwen2.5-Math model with LoRA"""
@@ -10,7 +28,7 @@ class MathTransformerModel:
     def __init__(
         self, 
         base_model_id="Qwen/Qwen2.5-Math-1.5B-Instruct",
-        lora_adapter_path=".\models\lora_adapter",  # Path to your fine-tuned LoRA weights
+        lora_adapter_path=DEFAULT_LORA_ADAPTER_PATH,  # Path to your fine-tuned LoRA weights
         device=None
     ):
         self.base_model_id = base_model_id
